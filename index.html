@@ -10,39 +10,40 @@
     a plain static site on Vercel (or any static host).
 
     CDN dependencies:
-      • Pyodide 0.26.2  — Python 3.11 + numpy/scipy in WebAssembly
-      • Plotly.js 2.35  — Interactive BER waterfall chart
+      * Pyodide 0.26.2  -- Python 3.11 + numpy/scipy in WebAssembly
+      * Plotly.js 2.35  -- Interactive BER waterfall chart
   -->
   <script src="https://cdn.jsdelivr.net/pyodide/v0.26.2/full/pyodide.js"></script>
   <script src="https://cdn.plot.ly/plotly-2.35.0.min.js"></script>
   <style>
-    /* ── Design tokens ─────────────────────────────────────────────────── */
+    /* Design tokens */
     :root {
-      --bg:        #0a0a1a;
-      --bg2:       #12122a;
-      --card:      #1a1a30;
-      --border:    rgba(100,110,220,.20);
-      --cyan:      #00e5ff;
-      --blue:      #4fc3f7;
-      --red:       #ff5252;
-      --green:     #69f0ae;
-      --yellow:    #ffd740;
-      --text:      #e8eaf6;
-      --text2:     #9fa8da;
-      --dim:       #546e7a;
-      --mono:      'Consolas','Courier New',monospace;
-      --sans:      -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+      --bg:   #0a0a1a;
+      --bg2:  #12122a;
+      --card: #1a1a30;
+      --border: rgba(100,110,220,.20);
+      --cyan:   #00e5ff;
+      --blue:   #4fc3f7;
+      --red:    #ff5252;
+      --green:  #69f0ae;
+      --yellow: #ffd740;
+      --text:   #e8eaf6;
+      --text2:  #9fa8da;
+      --dim:    #546e7a;
+      --mono:   'Consolas','Courier New',monospace;
+      --sans:   -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
     }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
+    html, body {
+      height: 100%;
       background: var(--bg);
       color: var(--text);
       font-family: var(--sans);
-      min-height: 100vh;
-      overflow-x: hidden;
+      overflow: hidden;
     }
+    body { display: flex; flex-direction: column; }
 
-    /* ── Loading overlay ────────────────────────────────────────────────── */
+    /* Loading overlay */
     #overlay {
       position: fixed; inset: 0;
       background: var(--bg);
@@ -62,18 +63,19 @@
     }
     @keyframes spin { to { transform: rotate(360deg); } }
     #ov-title  { font-size: 1.25rem; font-weight: 700; color: var(--cyan); margin-bottom: 6px; }
-    #ov-status { font-size: .85rem;  color: var(--text2); margin-bottom: 22px; min-height: 1.2em; }
+    #ov-status { font-size: .85rem; color: var(--text2); margin-bottom: 22px; min-height: 1.2em; }
     .load-bar  { width: 280px; height: 4px; background: rgba(0,229,255,.15); border-radius: 2px; overflow: hidden; }
     .load-fill { height: 100%; background: var(--cyan); transition: width .3s ease; width: 0%; }
     #ov-note   { margin-top: 28px; font-size: .72rem; color: var(--dim); text-align: center;
                  max-width: 320px; line-height: 1.65; }
 
-    /* ── Header ─────────────────────────────────────────────────────────── */
+    /* Header */
     header {
       background: linear-gradient(180deg,rgba(18,18,42,.97) 0%,transparent 100%);
       border-bottom: 1px solid var(--border);
-      padding: 18px 28px;
+      padding: 14px 28px;
       display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+      flex-shrink: 0;
     }
     .hicon { font-size: 1.9rem; line-height: 1; }
     .htxt h1 {
@@ -92,25 +94,49 @@
       border: 1px solid rgba(0,229,255,.25);
     }
 
-    /* ── Two-column layout ──────────────────────────────────────────────── */
+    /* Two-column grid */
     main {
       display: grid;
-      grid-template-columns: 290px 1fr;
-      min-height: calc(100vh - 70px);
+      grid-template-columns: 300px 1fr;
+      flex: 1;
+      min-height: 0;
     }
 
-    /* ── Left panel ─────────────────────────────────────────────────────── */
+    /* Left panel */
     .left {
       background: var(--bg2);
       border-right: 1px solid var(--border);
-      padding: 22px 20px;
-      display: flex; flex-direction: column; gap: 18px;
+      padding: 16px 18px;
+      display: flex; flex-direction: column; gap: 14px;
+      overflow-y: auto;
     }
+
+    /* Mode tabs */
+    .mode-tabs {
+      display: flex; gap: 4px;
+      background: rgba(0,229,255,.05);
+      border: 1px solid var(--border);
+      border-radius: 8px; padding: 4px;
+      flex-shrink: 0;
+    }
+    .mode-tab {
+      flex: 1; padding: 7px 4px;
+      background: transparent; border: none; border-radius: 5px;
+      color: var(--text2); font-size: .76rem; font-weight: 600;
+      cursor: pointer; transition: all .18s ease;
+      text-align: center; line-height: 1.3;
+    }
+    .mode-tab.active { background: var(--cyan); color: #0a0a1a; }
+    .mode-tab:not(.active):hover { background: rgba(0,229,255,.12); color: var(--text); }
+
+    .mode-panel { display: none; flex-direction: column; gap: 14px; }
+    .mode-panel.active { display: flex; }
+
     .sect-lbl {
       font-size: .65rem; font-weight: 700; text-transform: uppercase;
       letter-spacing: .1em; color: var(--dim); margin-bottom: 10px;
     }
-    .params { display: flex; flex-direction: column; gap: 14px; }
+    .params { display: flex; flex-direction: column; gap: 12px; }
     .p-item { display: flex; flex-direction: column; gap: 5px; }
     .p-row  { display: flex; justify-content: space-between; align-items: center; }
     .p-name { font-size: .82rem; color: var(--text2); }
@@ -140,8 +166,19 @@
     }
     select:focus { border-color: var(--cyan); }
 
+    .txt-label { font-size: .82rem; color: var(--text2); margin-bottom: 5px; }
+    textarea#txt-input {
+      width: 100%; height: 90px;
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 6px; padding: 8px 10px;
+      color: var(--text); font-size: .83rem; font-family: var(--mono);
+      resize: vertical; outline: none; line-height: 1.5;
+    }
+    textarea#txt-input:focus { border-color: var(--cyan); }
+    .char-count { font-size: .72rem; color: var(--dim); text-align: right; margin-top: 3px; }
+
     .run-btn {
-      width: 100%; padding: 13px;
+      width: 100%; padding: 12px;
       background: linear-gradient(135deg,#0076a8,#009ac4);
       border: none; border-radius: 8px;
       color: #fff; font-size: .9rem; font-weight: 700;
@@ -184,10 +221,10 @@
     .dot.error   { background: var(--red); }
     @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.25} }
 
-    /* Theory card */
+    /* Theory / info cards */
     .theory {
       background: var(--card); border: 1px solid var(--border);
-      border-radius: 8px; padding: 13px 14px;
+      border-radius: 8px; padding: 12px 14px;
     }
     .theory p { font-size: .77rem; color: var(--text2); line-height: 1.55; }
     .formula {
@@ -198,18 +235,50 @@
       border-radius: 4px; padding: 7px 10px;
     }
 
-    /* ── Right panel ─────────────────────────────────────────────────────── */
+    /* Right panel */
     .right {
       background: var(--bg);
-      padding: 22px 24px;
-      display: flex; flex-direction: column; gap: 18px;
+      display: flex; flex-direction: column;
+      overflow: hidden;
     }
-    .chart-card {
+
+    /* Right panel tabs */
+    .right-tabs {
+      display: flex; gap: 0;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg2);
+      padding: 0 18px;
+      flex-shrink: 0;
+    }
+    .right-tab {
+      padding: 10px 18px;
+      background: transparent; border: none;
+      border-bottom: 2px solid transparent;
+      color: var(--text2); font-size: .82rem; font-weight: 600;
+      cursor: pointer; transition: all .18s ease;
+    }
+    .right-tab.active { color: var(--cyan); border-bottom-color: var(--cyan); }
+    .right-tab:not(.active):not(.disabled):hover { color: var(--text); }
+    .right-tab.disabled { opacity: .35; cursor: not-allowed; }
+
+    /* Right content scroll area */
+    .right-scroll {
       flex: 1;
+      overflow-y: auto;
+      padding: 18px 22px;
+    }
+
+    .r-panel { display: none; flex-direction: column; gap: 16px; }
+    .r-panel.active { display: flex; }
+
+    /* Chart card -- fixed height to prevent clipping */
+    .chart-card {
       background: var(--card);
       border: 1px solid var(--border);
       border-radius: 12px; padding: 16px;
-      min-height: 420px; position: relative;
+      height: 440px;
+      position: relative;
+      flex-shrink: 0;
     }
     .placeholder {
       position: absolute; inset: 0;
@@ -220,7 +289,7 @@
     }
     .placeholder-icon { font-size: 2.8rem; }
     .placeholder-txt  { font-size: .88rem; }
-    #chart { width: 100%; height: 100%; min-height: 390px; }
+    #chart { width: 100%; height: 408px; }
 
     /* Results table */
     .tbl-card {
@@ -228,7 +297,9 @@
       border: 1px solid var(--border);
       border-radius: 12px; padding: 16px;
       overflow-x: auto; display: none;
+      flex-shrink: 0;
     }
+    .tbl-card.always-show { display: block; }
     .tbl-card h3 {
       font-size: .75rem; color: var(--text2);
       text-transform: uppercase; letter-spacing: .08em;
@@ -249,177 +320,426 @@
     .medium { color: var(--yellow); font-weight: 600; }
     .poor   { color: var(--red); font-weight: 600; }
 
-    /* ── Responsive ─────────────────────────────────────────────────────── */
-    @media (max-width: 860px) {
-      main { grid-template-columns: 1fr; }
-      .left { border-right: none; border-bottom: 1px solid var(--border); }
+    /* Text results */
+    .txt-stats-bar {
+      display: flex; gap: 18px; flex-wrap: wrap;
+      padding: 10px 16px;
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 8px; font-size: .82rem;
+      flex-shrink: 0;
+    }
+    .stat-item { display: flex; flex-direction: column; gap: 3px; }
+    .stat-lbl  { font-size: .65rem; text-transform: uppercase; letter-spacing: .08em; color: var(--dim); }
+    .stat-val  { font-family: var(--mono); font-weight: 600; color: var(--text); }
+
+    .txt-compare {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+      flex-shrink: 0;
+    }
+    .txt-box {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 10px; overflow: hidden;
+    }
+    .txt-box-hdr {
+      padding: 8px 14px;
+      font-size: .7rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .08em; color: var(--dim);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .dot-sm { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
+    .txt-box-body {
+      padding: 12px 14px;
+      font-family: var(--mono); font-size: .9rem; line-height: 1.7;
+      white-space: pre-wrap; word-break: break-all;
+      min-height: 80px; max-height: 220px; overflow-y: auto;
+    }
+    .txt-placeholder {
+      padding: 12px 14px;
+      font-size: .83rem; color: var(--dim);
+      font-style: italic;
+    }
+    .err-orig { background: rgba(255,82,82,.25); color: var(--red); border-radius: 2px; }
+    .err-dec  { background: rgba(255,215,64,.25); color: var(--yellow); border-radius: 2px; }
+
+    /* Bit error grid */
+    .bit-grid-card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 10px; padding: 14px 16px;
+      flex-shrink: 0;
+    }
+    .bit-grid-hdr {
+      font-size: .7rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .08em; color: var(--dim); margin-bottom: 10px;
+    }
+    .bit-grid {
+      display: flex; flex-wrap: wrap; gap: 2px; align-items: center;
+      max-height: 120px; overflow-y: auto;
+    }
+    .bit-cell {
+      width: 10px; height: 10px; border-radius: 2px;
+      background: rgba(0,229,255,.15);
+    }
+    .bit-cell.err { background: var(--red); }
+
+    /* Constellation */
+    .const-card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 12px; padding: 16px;
+      height: 420px;
+      flex-shrink: 0;
+    }
+    #constellation { width: 100%; height: 388px; }
+
+    /* Responsive */
+    @media (max-width: 900px) {
+      html, body { height: auto; overflow: auto; }
+      main { grid-template-columns: 1fr; height: auto; }
+      .right { overflow: visible; }
+      .right-scroll { overflow: visible; }
+      .left { border-right: none; border-bottom: 1px solid var(--border); overflow-y: visible; }
       .badges { margin-left: 0; }
+      .txt-compare { grid-template-columns: 1fr; }
     }
   </style>
 </head>
 <body>
 
-<!-- Loading overlay ────────────────────────────────────────────────────── -->
+<!-- Loading overlay -->
 <div id="overlay">
   <div class="spinner"></div>
   <div id="ov-title">Initialising Simulation Engine</div>
-  <div id="ov-status">Loading Python runtime…</div>
+  <div id="ov-status">Loading Python runtime...</div>
   <div class="load-bar"><div class="load-fill" id="ov-fill"></div></div>
   <div id="ov-note">
     First load fetches numpy &amp; scipy via Pyodide (~15 MB).<br>
-    Subsequent visits use the browser cache — typically &lt; 2 s.
+    Subsequent visits use the browser cache -- typically &lt; 2 s.
   </div>
 </div>
 
-<!-- Header ─────────────────────────────────────────────────────────────── -->
+<!-- Header -->
 <header>
-  <span class="hicon">📡</span>
+  <span class="hicon">&#128225;</span>
   <div class="htxt">
     <h1>QPSK Baseband Transceiver Simulator</h1>
-    <p>End-to-end DSP simulation · RRC pulse shaping · AWGN channel · BER waterfall · runs entirely in your browser</p>
+    <p>End-to-end DSP simulation &middot; RRC pulse shaping &middot; AWGN channel &middot; BER waterfall &middot; Text transmission &middot; Constellation diagram &middot; runs entirely in your browser</p>
   </div>
   <div class="badges">
     <span class="badge">QPSK</span>
     <span class="badge">AWGN</span>
-    <span class="badge">RRC α=0.35</span>
+    <span class="badge">RRC &alpha;=0.35</span>
     <span class="badge">ETSI EN 302 307-1</span>
     <span class="badge">Pyodide</span>
   </div>
 </header>
 
-<!-- Main layout ────────────────────────────────────────────────────────── -->
+<!-- Main layout -->
 <main>
 
-  <!-- ── Left: parameters ─────────────────────────────────────────────── -->
+  <!-- Left: parameters -->
   <aside class="left">
-    <div>
-      <div class="sect-lbl">Simulation Parameters</div>
-      <div class="params">
 
-        <!-- N bits -->
-        <div class="p-item">
-          <div class="p-row">
-            <span class="p-name">Number of bits</span>
-            <span class="p-val" id="v-nbits">10 000</span>
+    <!-- Mode switcher -->
+    <div class="mode-tabs">
+      <button class="mode-tab active" onclick="switchMode('ber')" id="tab-ber">&#128202; BER Simulation</button>
+      <button class="mode-tab" onclick="switchMode('text')" id="tab-text">&#128221; Text Mode</button>
+    </div>
+
+    <!-- BER mode params -->
+    <div class="mode-panel active" id="panel-ber">
+      <div>
+        <div class="sect-lbl">Simulation Parameters</div>
+        <div class="params">
+
+          <div class="p-item">
+            <div class="p-row">
+              <span class="p-name">Number of bits</span>
+              <span class="p-val" id="v-nbits">10 000</span>
+            </div>
+            <input type="range" id="n_bits" min="2000" max="50000" step="2000" value="10000"
+              oninput="document.getElementById('v-nbits').textContent=Number(this.value).toLocaleString()">
           </div>
-          <input type="range" id="n_bits" min="2000" max="50000" step="2000" value="10000"
-            oninput="document.getElementById('v-nbits').textContent=Number(this.value).toLocaleString()">
-        </div>
 
-        <!-- SPS -->
-        <div class="p-item">
-          <div class="p-row">
-            <span class="p-name">Samples per Symbol (SPS)</span>
-            <span class="p-val" id="v-sps">8</span>
+          <div class="p-item">
+            <div class="p-row">
+              <span class="p-name">Samples per Symbol (SPS)</span>
+              <span class="p-val" id="v-sps">8</span>
+            </div>
+            <select id="sps" onchange="document.getElementById('v-sps').textContent=this.value">
+              <option value="4">4</option>
+              <option value="8" selected>8</option>
+              <option value="16">16</option>
+            </select>
           </div>
-          <select id="sps" onchange="document.getElementById('v-sps').textContent=this.value">
-            <option value="4">4</option>
-            <option value="8" selected>8</option>
-            <option value="16">16</option>
-          </select>
-        </div>
 
-        <!-- Beta -->
-        <div class="p-item">
-          <div class="p-row">
-            <span class="p-name">Roll-off factor β (RRC)</span>
-            <span class="p-val" id="v-beta">0.35</span>
+          <div class="p-item">
+            <div class="p-row">
+              <span class="p-name">Roll-off factor &beta; (RRC)</span>
+              <span class="p-val" id="v-beta">0.35</span>
+            </div>
+            <input type="range" id="beta" min="0.10" max="0.90" step="0.05" value="0.35"
+              oninput="document.getElementById('v-beta').textContent=parseFloat(this.value).toFixed(2)">
           </div>
-          <input type="range" id="beta" min="0.10" max="0.90" step="0.05" value="0.35"
-            oninput="document.getElementById('v-beta').textContent=parseFloat(this.value).toFixed(2)">
-        </div>
 
-        <!-- Max Eb/N0 -->
-        <div class="p-item">
-          <div class="p-row">
-            <span class="p-name">Max E<sub>b</sub>/N<sub>0</sub></span>
-            <span class="p-val" id="v-ebn0">10 dB</span>
+          <div class="p-item">
+            <div class="p-row">
+              <span class="p-name">Max E<sub>b</sub>/N<sub>0</sub></span>
+              <span class="p-val" id="v-ebn0">10 dB</span>
+            </div>
+            <input type="range" id="ebn0_max" min="6" max="14" step="1" value="10"
+              oninput="document.getElementById('v-ebn0').textContent=this.value+' dB'">
           </div>
-          <input type="range" id="ebn0_max" min="6" max="14" step="1" value="10"
-            oninput="document.getElementById('v-ebn0').textContent=this.value+' dB'">
-        </div>
 
-        <!-- Filter taps -->
-        <div class="p-item">
-          <div class="p-row">
-            <span class="p-name">RRC filter taps</span>
-            <span class="p-val" id="v-taps">101</span>
+          <div class="p-item">
+            <div class="p-row">
+              <span class="p-name">RRC filter taps</span>
+              <span class="p-val" id="v-taps">101</span>
+            </div>
+            <select id="n_taps" onchange="document.getElementById('v-taps').textContent=this.value">
+              <option value="51">51</option>
+              <option value="101" selected>101</option>
+              <option value="201">201</option>
+            </select>
           </div>
-          <select id="n_taps" onchange="document.getElementById('v-taps').textContent=this.value">
-            <option value="51">51</option>
-            <option value="101" selected>101</option>
-            <option value="201">201</option>
-          </select>
-        </div>
 
+        </div>
+      </div>
+
+      <button class="run-btn" id="run-btn" onclick="runSim()" disabled>
+        &#9889; Run Simulation
+      </button>
+
+      <div class="theory">
+        <p>Theoretical BER for Gray-coded QPSK over AWGN (Proakis &amp; Salehi, &sect;8.2.5):</p>
+        <code class="formula">P_b = &frac12; &middot; erfc( &radic;(E_b / N_0) )</code>
+        <p style="margin-top:8px">Standard: ETSI EN 302 307-1 (DVB-S2) &middot; Roll-off &alpha; = 0.35</p>
       </div>
     </div>
 
-    <button class="run-btn" id="run-btn" onclick="runSim()" disabled>
-      ⚡ Run Simulation
-    </button>
+    <!-- Text mode params -->
+    <div class="mode-panel" id="panel-text">
+      <div>
+        <div class="sect-lbl">Text Transmission</div>
 
-    <!-- Simulation progress -->
+        <div class="p-item" style="margin-bottom:8px">
+          <div class="txt-label">Message to transmit</div>
+          <textarea id="txt-input" placeholder="Type your message here..." oninput="updateCharCount()">Hello, QPSK World!</textarea>
+          <div class="char-count" id="char-count">18 chars &middot; 144 bits</div>
+        </div>
+
+        <div class="params">
+
+          <div class="p-item">
+            <div class="p-row">
+              <span class="p-name">E<sub>b</sub>/N<sub>0</sub> (channel SNR)</span>
+              <span class="p-val" id="v-txt-ebn0">4.0 dB</span>
+            </div>
+            <input type="range" id="txt-ebn0" min="0" max="14" step="0.5" value="4"
+              oninput="document.getElementById('v-txt-ebn0').textContent=parseFloat(this.value).toFixed(1)+' dB'">
+          </div>
+
+          <div class="p-item">
+            <div class="p-row">
+              <span class="p-name">Samples per Symbol (SPS)</span>
+              <span class="p-val" id="v-txt-sps">8</span>
+            </div>
+            <select id="txt-sps" onchange="document.getElementById('v-txt-sps').textContent=this.value">
+              <option value="4">4</option>
+              <option value="8" selected>8</option>
+              <option value="16">16</option>
+            </select>
+          </div>
+
+          <div class="p-item">
+            <div class="p-row">
+              <span class="p-name">Roll-off factor &beta; (RRC)</span>
+              <span class="p-val" id="v-txt-beta">0.35</span>
+            </div>
+            <input type="range" id="txt-beta" min="0.10" max="0.90" step="0.05" value="0.35"
+              oninput="document.getElementById('v-txt-beta').textContent=parseFloat(this.value).toFixed(2)">
+          </div>
+
+          <div class="p-item">
+            <div class="p-row">
+              <span class="p-name">RRC filter taps</span>
+              <span class="p-val" id="v-txt-taps">101</span>
+            </div>
+            <select id="txt-taps" onchange="document.getElementById('v-txt-taps').textContent=this.value">
+              <option value="51">51</option>
+              <option value="101" selected>101</option>
+              <option value="201">201</option>
+            </select>
+          </div>
+
+        </div>
+      </div>
+
+      <button class="run-btn" id="txt-run-btn" onclick="runTextSim()" disabled>
+        &#128225; Transmit &amp; Decode
+      </button>
+
+      <div class="theory">
+        <p>Each character is UTF-8 encoded to 8 bits, Gray-coded QPSK modulated, corrupted by AWGN, then decoded back to text.</p>
+        <p style="margin-top:8px">&#128161; Lower E<sub>b</sub>/N<sub>0</sub> = more errors in the decoded text!</p>
+      </div>
+    </div>
+
+    <!-- Sim progress bar (shared) -->
     <div class="sim-bar" id="sim-bar">
-      <div class="sim-bar-lbl" id="sim-lbl">Computing…</div>
+      <div class="sim-bar-lbl" id="sim-lbl">Computing...</div>
       <div class="sim-track"><div class="sim-fill" id="sim-fill"></div></div>
     </div>
 
-    <!-- Status pill -->
+    <!-- Status pill (shared) -->
     <div class="status-pill">
       <div class="dot" id="dot"></div>
-      <span id="status">Initialising…</span>
+      <span id="status">Initialising...</span>
     </div>
 
-    <!-- Theory card -->
-    <div class="theory">
-      <p>Theoretical BER for Gray-coded QPSK over AWGN (Proakis &amp; Salehi, §8.2.5):</p>
-      <code class="formula">P_b = ½ · erfc( √(E_b / N_0) )</code>
-      <p style="margin-top:8px">Standard: ETSI EN 302 307-1 (DVB-S2) · Roll-off α = 0.35</p>
-    </div>
   </aside>
 
-  <!-- ── Right: chart + table ─────────────────────────────────────────── -->
+  <!-- Right: chart/results area -->
   <div class="right">
-    <div class="chart-card">
-      <div class="placeholder" id="ph">
-        <span class="placeholder-icon">📊</span>
-        <span class="placeholder-txt">Run the simulation to generate the BER waterfall curve</span>
+
+    <!-- Right panel tabs -->
+    <div class="right-tabs">
+      <button class="right-tab active" onclick="switchRightTab('r-ber')" id="rtab-ber">&#128202; BER Waterfall</button>
+      <button class="right-tab disabled" onclick="switchRightTab('r-text')" id="rtab-text">&#128221; Text Results</button>
+      <button class="right-tab disabled" onclick="switchRightTab('r-const')" id="rtab-const">&#128301; Constellation</button>
+    </div>
+
+    <!-- Scrollable content area -->
+    <div class="right-scroll">
+
+      <!-- BER panel -->
+      <div class="r-panel active" id="r-ber">
+        <div class="chart-card">
+          <div class="placeholder" id="ph">
+            <span class="placeholder-icon">&#128202;</span>
+            <span class="placeholder-txt">Run the simulation to generate the BER waterfall curve</span>
+          </div>
+          <div id="chart"></div>
+        </div>
+        <div class="tbl-card" id="tbl-card">
+          <h3>BER Results</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>E<sub>b</sub>/N<sub>0</sub> (dB)</th>
+                <th>Empirical BER</th>
+                <th>Theoretical BER</th>
+                <th>Bit errors / total</th>
+                <th>% of theory</th>
+              </tr>
+            </thead>
+            <tbody id="tbody"></tbody>
+          </table>
+        </div>
       </div>
-      <div id="chart"></div>
-    </div>
-    <div class="tbl-card" id="tbl-card">
-      <h3>BER Results</h3>
-      <table>
-        <thead>
-          <tr>
-            <th>E<sub>b</sub>/N<sub>0</sub> (dB)</th>
-            <th>Empirical BER</th>
-            <th>Theoretical BER</th>
-            <th>Bit errors / total</th>
-            <th>% of theory</th>
-          </tr>
-        </thead>
-        <tbody id="tbody"></tbody>
-      </table>
-    </div>
-  </div>
+
+      <!-- Text results panel -->
+      <div class="r-panel" id="r-text">
+
+        <div class="txt-stats-bar" id="txt-stats-bar">
+          <div class="stat-item">
+            <span class="stat-lbl">Eb/N&#8320;</span>
+            <span class="stat-val" id="st-ebn0">--</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-lbl">Bit errors</span>
+            <span class="stat-val" id="st-biterr">--</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-lbl">BER</span>
+            <span class="stat-val" id="st-ber">--</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-lbl">Char errors</span>
+            <span class="stat-val" id="st-charerr">--</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-lbl">Char accuracy</span>
+            <span class="stat-val" id="st-acc">--</span>
+          </div>
+        </div>
+
+        <div class="txt-compare">
+          <div class="txt-box">
+            <div class="txt-box-hdr">
+              <span class="dot-sm" style="background:var(--green)"></span>
+              Original (transmitted)
+            </div>
+            <div class="txt-box-body" id="txt-orig">
+              <div class="txt-placeholder">Run a transmission to see results</div>
+            </div>
+          </div>
+          <div class="txt-box">
+            <div class="txt-box-hdr">
+              <span class="dot-sm" style="background:var(--yellow)"></span>
+              Decoded (received) &mdash; <span style="color:var(--red);font-size:.75em">highlighted = error chars</span>
+            </div>
+            <div class="txt-box-body" id="txt-dec">
+              <div class="txt-placeholder">Decoded text will appear here</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="bit-grid-card">
+          <div class="bit-grid-hdr">
+            Bit error map &mdash; each cell = 1 bit &nbsp;
+            (<span style="color:var(--red)">&#9632;</span> = error &nbsp; <span style="color:var(--cyan);opacity:.5">&#9632;</span> = correct)
+          </div>
+          <div class="bit-grid" id="bit-grid"></div>
+        </div>
+      </div>
+
+      <!-- Constellation panel -->
+      <div class="r-panel" id="r-const">
+        <div class="const-card">
+          <div class="placeholder" id="ph-const">
+            <span class="placeholder-icon">&#128301;</span>
+            <span class="placeholder-txt">Run a Text Transmission to see the received constellation</span>
+          </div>
+          <div id="constellation"></div>
+        </div>
+        <div class="tbl-card always-show">
+          <h3>QPSK Constellation Reference</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Symbol</th>
+                <th>Ideal I</th>
+                <th>Ideal Q</th>
+                <th>Bit pair (Gray)</th>
+                <th>Phase</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>S&#8320;</td><td>+1/&radic;2 &asymp; +0.7071</td><td>+1/&radic;2 &asymp; +0.7071</td><td>00</td><td>+45&deg;</td></tr>
+              <tr><td>S&#8321;</td><td>&minus;1/&radic;2 &asymp; &minus;0.7071</td><td>+1/&radic;2 &asymp; +0.7071</td><td>01</td><td>+135&deg;</td></tr>
+              <tr><td>S&#8322;</td><td>&minus;1/&radic;2 &asymp; &minus;0.7071</td><td>&minus;1/&radic;2 &asymp; &minus;0.7071</td><td>11</td><td>&minus;135&deg;</td></tr>
+              <tr><td>S&#8323;</td><td>+1/&radic;2 &asymp; +0.7071</td><td>&minus;1/&radic;2 &asymp; &minus;0.7071</td><td>10</td><td>&minus;45&deg;</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div><!-- .right-scroll -->
+  </div><!-- .right -->
 
 </main>
 
 <!--
-  ═══════════════════════════════════════════════════════════════════════════
-  EMBEDDED PYTHON — executed once at startup by Pyodide.
-  Defines every DSP function in a single flat namespace so no cross-module
-  imports are needed at runtime.
-  ═══════════════════════════════════════════════════════════════════════════
+  EMBEDDED PYTHON: executed once at startup by Pyodide.
+  All DSP functions defined in a single flat namespace -- no cross-module
+  imports needed at runtime.
 -->
 <script id="py-init" type="text/plain">
 import numpy as np
 from scipy.special import erfc
 import json
 
-# ── QPSK constellation (Gray-coded, unit energy) ──────────────────────────
+# QPSK constellation (Gray-coded, unit energy)
 _S2 = 1.0 / np.sqrt(2)
 GRAY_QPSK_MAP = {
     (0, 0): complex( 1,  1) * _S2,
@@ -434,7 +754,7 @@ QUADRANT_TO_BITS = {
     ( 1, -1): (1, 0),
 }
 
-# ── Transmitter ───────────────────────────────────────────────────────────
+# Transmitter
 def generate_bits(n_bits, seed=42):
     return np.random.default_rng(seed).integers(0, 2, size=n_bits, dtype=int)
 
@@ -450,12 +770,8 @@ def upsample(symbols, sps):
 def rrc_filter(beta, sps, n_taps):
     """
     Root-Raised Cosine FIR filter.
-    Impulse response (discrete-time, T_sym = sps samples):
-      h[n] = (1/√sps) · [sin(π·t·(1-β)) + 4β·t·cos(π·t·(1+β))]
-             / [π·t·(1 - (4β·t)²)]     where t = n/sps
-    Special cases via L'Hôpital's rule at t=0 and t=±1/(4β).
-    Normalised to unit energy: ‖h‖² = 1.
-    Reference: ETSI EN 302 307-1 Annex B (β=0.35 for DVB-S2).
+    Normalised to unit energy: ||h||^2 = 1.
+    Reference: ETSI EN 302 307-1 Annex B (beta=0.35 for DVB-S2).
     """
     half = (n_taps - 1) // 2
     t = np.arange(-half, half + 1, dtype=float) / sps
@@ -486,22 +802,18 @@ def transmit(n_bits, sps, beta, n_taps, seed=42):
     tx   = pulse_shape(upsample(syms, sps), taps)
     return tx, bits, taps
 
-# ── Channel ───────────────────────────────────────────────────────────────
+# Channel
 def awgn_channel(tx, ebn0_db, k=2):
     """
-    AWGN channel.  Noise variance per component:
-      σ² = 1 / (2 · k · Eb/N0_linear)
-    where k = bits/symbol = 2 for QPSK.
-    The unit-energy RRC matched filter (‖h‖²=1) provides full processing
-    gain via convolution; no SPS factor appears here.
-    Reference: Proakis & Salehi, §4.1, §8.2.4.
+    AWGN channel. sigma^2 = 1 / (2 * k * Eb/N0_linear), k=2 for QPSK.
+    Reference: Proakis & Salehi, sec 4.1, sec 8.2.4.
     """
     ebn0_lin = 10.0 ** (ebn0_db / 10.0)
     sigma = np.sqrt(1.0 / (2.0 * k * ebn0_lin))
     rng = np.random.default_rng()
     return tx + sigma * (rng.standard_normal(len(tx)) + 1j * rng.standard_normal(len(tx)))
 
-# ── Receiver ─────────────────────────────────────────────────────────────
+# Receiver
 def matched_filter(rx, taps):
     return np.convolve(rx.real, taps, mode='full') + 1j * np.convolve(rx.imag, taps, mode='full')
 
@@ -519,13 +831,27 @@ def receive(rx, taps, sps):
     mf = matched_filter(rx, taps)
     return detect_symbols(downsample(mf, sps, len(taps)))
 
+# Text encoding / decoding
+def text_to_bits(text):
+    """Convert UTF-8 text to a numpy bit array (MSB first per byte)."""
+    raw = text.encode('utf-8')
+    return np.unpackbits(np.frombuffer(raw, dtype=np.uint8)).astype(int)
+
+def bits_to_text(bits):
+    """Convert a bit array back to a UTF-8 string. Pads to multiple of 8."""
+    b = np.clip(np.round(bits), 0, 1).astype(np.uint8)
+    pad = (8 - len(b) % 8) % 8
+    if pad:
+        b = np.concatenate([b, np.zeros(pad, dtype=np.uint8)])
+    return bytes(np.packbits(b)).decode('utf-8', errors='replace')
+
 print("QPSK simulation core ready.")
 </script>
 
 <!--
-  Async simulation runner — defined once, called per button click.
-  Uses `await asyncio.sleep(0)` between Eb/N0 iterations to yield control
-  back to the browser event loop so the progress bar re-renders.
+  Async simulation runners.
+  Uses await asyncio.sleep(0) to yield control back to the browser event
+  loop so the progress bar re-renders between iterations.
 -->
 <script id="py-runner" type="text/plain">
 import asyncio
@@ -541,18 +867,18 @@ async def run_simulation(n_bits, sps, beta, n_taps, ebn0_max, seed=42):
     for idx, ebn0_db in enumerate(ebn0_range):
         pct = int(idx * 100 // n_pts)
         _js.simProgress(f"Eb/N\u2080 = {ebn0_db} dB  [{idx+1}/{n_pts}]", pct)
-        await asyncio.sleep(0)          # yield → browser repaints progress bar
+        await asyncio.sleep(0)
 
         rx    = awgn_channel(tx, float(ebn0_db))
         det   = receive(rx, taps, int(sps))[:int(n_bits)]
         n_err = int(np.sum(bits != det))
-        ber_e = n_err / int(n_bits) if n_err > 0 else 5e-7  # floor: below chart y-axis min of 1e-6
+        ber_e = n_err / int(n_bits) if n_err > 0 else 5e-7
 
         ebn0_lin = 10.0 ** (ebn0_db / 10.0)
         ber_t = float(0.5 * erfc(np.sqrt(ebn0_lin)))
 
         results.append({
-            'ebn0_db':      float(ebn0_db),
+            'ebn0_db':       float(ebn0_db),
             'ber_empirical': float(ber_e),
             'ber_theory':    float(ber_t),
             'n_errors':      n_err,
@@ -560,14 +886,80 @@ async def run_simulation(n_bits, sps, beta, n_taps, ebn0_max, seed=42):
 
     _js.simProgress("Done!", 100)
     return json.dumps(results)
+
+
+async def run_text_simulation(text, sps, beta, n_taps, ebn0_db):
+    """
+    Transmit a text string over QPSK + AWGN and return decoded result with
+    per-bit error info and I/Q constellation data.
+    """
+    import js as _js
+
+    _js.simProgress("Encoding text to bits...", 10)
+    await asyncio.sleep(0)
+
+    orig_bits = text_to_bits(str(text))
+    n_orig    = len(orig_bits)
+
+    # QPSK needs an even number of bits (2 bits per symbol)
+    if n_orig % 2 != 0:
+        orig_bits = np.append(orig_bits, [0])
+
+    _js.simProgress("Pulse-shaping and transmitting...", 30)
+    await asyncio.sleep(0)
+
+    syms = map_bits_to_symbols(orig_bits)
+    taps = rrc_filter(float(beta), int(sps), int(n_taps))
+    tx   = pulse_shape(upsample(syms, int(sps)), taps)
+
+    _js.simProgress("Adding AWGN noise...", 55)
+    await asyncio.sleep(0)
+
+    rx = awgn_channel(tx, float(ebn0_db))
+
+    _js.simProgress("Matched filtering and decoding...", 75)
+    await asyncio.sleep(0)
+
+    mf      = matched_filter(rx, taps)
+    syms_rx = downsample(mf, int(sps), len(taps))[:len(syms)]
+
+    # Subsample constellation points for display (max 2000 pts)
+    n_show = min(len(syms_rx), 2000)
+    step   = max(1, len(syms_rx) // n_show)
+    iq_i   = syms_rx[::step].real.tolist()
+    iq_q   = syms_rx[::step].imag.tolist()
+
+    det_bits = detect_symbols(syms_rx)[:n_orig]
+
+    cmp_len    = min(n_orig, len(det_bits))
+    n_bit_errs = int(np.sum(orig_bits[:cmp_len] != det_bits[:cmp_len]))
+    ber        = float(n_bit_errs / cmp_len) if cmp_len > 0 else 0.0
+
+    decoded_text = bits_to_text(det_bits[:n_orig])
+
+    bit_errors = (orig_bits[:cmp_len] != det_bits[:cmp_len]).tolist()
+
+    _js.simProgress("Done!", 100)
+
+    return json.dumps({
+        'original':     str(text),
+        'decoded':      decoded_text,
+        'n_bit_errors': n_bit_errs,
+        'n_bits':       cmp_len,
+        'ber':          ber,
+        'ebn0_db':      float(ebn0_db),
+        'iq_i':         iq_i,
+        'iq_q':         iq_q,
+        'bit_errors':   bit_errors,
+    })
 </script>
 
 <script>
-/* ── JavaScript glue ───────────────────────────────────────────────────── */
+/* JavaScript glue */
 
-let pyodide = null;
+let pyodide    = null;
+let activeMode = 'ber';
 
-/** Called from Python (via Pyodide js module) to update the progress bar. */
 window.simProgress = function(text, pct) {
   document.getElementById('sim-lbl').textContent  = text;
   document.getElementById('sim-fill').style.width = pct + '%';
@@ -584,36 +976,64 @@ function setStatus(msg, state) {
   document.getElementById('dot').className = 'dot ' + (state || '');
 }
 
-/* ── Initialise Pyodide ────────────────────────────────────────────────── */
+/* Mode switching */
+function switchMode(mode) {
+  activeMode = mode;
+  ['ber','text'].forEach(m => {
+    document.getElementById('panel-' + m).classList.toggle('active', m === mode);
+    document.getElementById('tab-' + m).classList.toggle('active', m === mode);
+  });
+  if (mode === 'text') switchRightTab('r-text');
+  else switchRightTab('r-ber');
+}
+
+function switchRightTab(tabId) {
+  const tabs = ['r-ber','r-text','r-const'];
+  const btns = ['rtab-ber','rtab-text','rtab-const'];
+  tabs.forEach((id, i) => {
+    document.getElementById(id).classList.toggle('active', id === tabId);
+    const btn = document.getElementById(btns[i]);
+    if (!btn.classList.contains('disabled'))
+      btn.classList.toggle('active', id === tabId);
+  });
+}
+
+function enableRightTab(tabId) {
+  const map = {'r-ber':'rtab-ber','r-text':'rtab-text','r-const':'rtab-const'};
+  const btn = document.getElementById(map[tabId]);
+  if (btn) btn.classList.remove('disabled');
+}
+
+/* Initialise Pyodide */
 async function initPyodide() {
   try {
     if (typeof loadPyodide === 'undefined') {
       throw new Error(
         'Pyodide CDN script did not load. ' +
-        'Please ensure you have an internet connection and reload the page. ' +
-        '(This page requires access to cdn.jsdelivr.net to run Python in your browser.)'
+        'Please ensure you have an internet connection and reload the page.'
       );
     }
-    setOvStatus('Loading Python runtime (Pyodide)…', 5);
+    setOvStatus('Loading Python runtime (Pyodide)...', 5);
     pyodide = await loadPyodide();
 
-    setOvStatus('Loading numpy…', 30);
+    setOvStatus('Loading numpy...', 30);
     await pyodide.loadPackage('numpy');
 
-    setOvStatus('Loading scipy…', 60);
+    setOvStatus('Loading scipy...', 60);
     await pyodide.loadPackage('scipy');
 
-    setOvStatus('Loading simulation core…', 82);
+    setOvStatus('Loading simulation core...', 82);
     await pyodide.runPythonAsync(document.getElementById('py-init').textContent);
 
-    setOvStatus('Loading simulation runner…', 92);
+    setOvStatus('Loading simulation runners...', 92);
     await pyodide.runPythonAsync(document.getElementById('py-runner').textContent);
 
     setOvStatus('Ready!', 100);
     setTimeout(() => {
       document.getElementById('overlay').classList.add('gone');
-      document.getElementById('run-btn').disabled = false;
-      setStatus('Ready — configure parameters and click Run', 'ready');
+      document.getElementById('run-btn').disabled     = false;
+      document.getElementById('txt-run-btn').disabled = false;
+      setStatus('Ready -- configure parameters and click Run', 'ready');
     }, 400);
 
   } catch (err) {
@@ -622,7 +1042,7 @@ async function initPyodide() {
   }
 }
 
-/* ── Run simulation ─────────────────────────────────────────────────────── */
+/* BER simulation */
 async function runSim() {
   const n_bits   = +document.getElementById('n_bits').value;
   const sps      = +document.getElementById('sps').value;
@@ -633,15 +1053,16 @@ async function runSim() {
   document.getElementById('run-btn').disabled = true;
   document.getElementById('sim-bar').classList.add('on');
   document.getElementById('ph').style.display = 'none';
-  setStatus('Running simulation…', 'running');
+  setStatus('Running simulation...', 'running');
+  switchRightTab('r-ber');
 
   try {
-    const json = await pyodide.runPythonAsync(
+    const jsonStr = await pyodide.runPythonAsync(
       `await run_simulation(${n_bits}, ${sps}, ${beta}, ${n_taps}, ${ebn0_max})`
     );
-    const results = JSON.parse(json);
+    const results = JSON.parse(jsonStr);
     renderResults(results, n_bits);
-    setStatus(`Done — ${results.length} Eb/N₀ points (${n_bits.toLocaleString()} bits each)`, 'ready');
+    setStatus(`Done -- ${results.length} Eb/N\u2080 points (${n_bits.toLocaleString()} bits each)`, 'ready');
   } catch (err) {
     setStatus('Error: ' + err.message, 'error');
     console.error(err);
@@ -653,19 +1074,65 @@ async function runSim() {
   }
 }
 
-/* ── Render Plotly chart + BER table ───────────────────────────────────── */
+/* Text simulation */
+async function runTextSim() {
+  const text   = document.getElementById('txt-input').value;
+  const ebn0   = +document.getElementById('txt-ebn0').value;
+  const sps    = +document.getElementById('txt-sps').value;
+  const beta   = +document.getElementById('txt-beta').value;
+  const n_taps = +document.getElementById('txt-taps').value;
+
+  if (!text.trim()) {
+    setStatus('Please enter a message to transmit.', 'error');
+    return;
+  }
+
+  document.getElementById('txt-run-btn').disabled = true;
+  document.getElementById('sim-bar').classList.add('on');
+  setStatus('Transmitting text...', 'running');
+  switchRightTab('r-text');
+
+  try {
+    // Pass text via Pyodide globals to avoid any string-escaping injection risk
+    pyodide.globals.set('_tx_text', text);
+    const jsonStr = await pyodide.runPythonAsync(
+      `await run_text_simulation(_tx_text, ${sps}, ${beta}, ${n_taps}, ${ebn0})`
+    );
+    const data = JSON.parse(jsonStr);
+
+    renderTextResults(data);
+    renderConstellation(data);
+
+    enableRightTab('r-text');
+    enableRightTab('r-const');
+    switchRightTab('r-text');
+
+    setStatus(
+      `Done -- ${data.n_bit_errors} bit errors / ${data.n_bits} bits  (BER ${data.ber.toExponential(2)})`,
+      'ready'
+    );
+  } catch (err) {
+    setStatus('Error: ' + err.message, 'error');
+    console.error(err);
+  } finally {
+    document.getElementById('txt-run-btn').disabled = false;
+    document.getElementById('sim-bar').classList.remove('on');
+    simProgress('', 0);
+  }
+}
+
+/* Render BER chart + table */
 function renderResults(results, n_bits) {
   const ebn0  = results.map(r => r.ebn0_db);
   const berE  = results.map(r => r.ber_empirical);
   const berT  = results.map(r => r.ber_theory);
 
-  /* Plotly dark layout */
   const layout = {
     paper_bgcolor: 'rgba(0,0,0,0)',
     plot_bgcolor:  'rgba(0,0,0,0)',
     font: { color: '#9fa8da', family: 'system-ui,sans-serif', size: 12 },
     xaxis: {
-      title: { text: 'Eb/N₀ (dB)', standoff: 8 },
+      title: { text: 'Eb/N\u2080 (dB)', standoff: 8 },
       color: '#9fa8da', gridcolor: 'rgba(100,110,220,.15)',
       zerolinecolor: 'rgba(100,110,220,.25)', tickfont: { color: '#9fa8da' },
     },
@@ -677,7 +1144,7 @@ function renderResults(results, n_bits) {
       tickfont: { color: '#9fa8da' }, range: [-7, 0],
     },
     title: {
-      text: 'QPSK BER Waterfall Curve — AWGN Channel (RRC α=0.35, ETSI EN 302 307-1)',
+      text: 'QPSK BER Waterfall Curve \u2014 AWGN Channel (RRC \u03b1=0.35, ETSI EN 302 307-1)',
       font: { color: '#e8eaf6', size: 13 }, x: 0.5,
     },
     legend: {
@@ -696,18 +1163,17 @@ function renderResults(results, n_bits) {
       line:   { color: '#00e5ff', width: 2.2 },
       marker: { symbol: 'circle', size: 8, color: '#00e5ff',
                 line: { color: '#00b8d4', width: 1 } },
-      hovertemplate: 'Eb/N₀ %{x} dB → BER %{y:.2e}<extra>Empirical</extra>',
+      hovertemplate: 'Eb/N\u2080 %{x} dB \u2192 BER %{y:.2e}<extra>Empirical</extra>',
     },
     {
       x: ebn0, y: berT, mode: 'lines+markers',
-      name: 'Theoretical: ½·erfc(√(Eᵦ/N₀))',
+      name: 'Theoretical: \u00bd\u00b7erfc(\u221a(E\u1d6e/N\u2080))',
       line:   { color: '#ff5252', width: 2.2, dash: 'dash' },
       marker: { symbol: 'x', size: 8, color: '#ff5252' },
-      hovertemplate: 'Eb/N₀ %{x} dB → BER %{y:.2e}<extra>Theory</extra>',
+      hovertemplate: 'Eb/N\u2080 %{x} dB \u2192 BER %{y:.2e}<extra>Theory</extra>',
     },
   ], layout, { responsive: true, displayModeBar: false });
 
-  /* BER table */
   const tbody = document.getElementById('tbody');
   tbody.innerHTML = '';
   results.forEach(r => {
@@ -728,6 +1194,137 @@ function renderResults(results, n_bits) {
       </tr>`;
   });
   document.getElementById('tbl-card').style.display = 'block';
+  enableRightTab('r-ber');
+}
+
+/* Render text results */
+function escHtml(s) {
+  return s
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;');
+}
+
+function renderTextResults(data) {
+  const orig = data.original;
+  const dec  = data.decoded;
+
+  const maxLen = Math.max(orig.length, dec.length);
+  let origHtml = '', decHtml = '';
+  let charErrors = 0;
+
+  for (let i = 0; i < maxLen; i++) {
+    // U+2592 MEDIUM SHADE used as placeholder when one string is shorter than the other
+    const o = i < orig.length ? orig[i] : '\u2592';
+    const d = i < dec.length  ? dec[i]  : '\u2592';
+    if (o !== d) {
+      charErrors++;
+      origHtml += `<span class="err-orig">${escHtml(o)}</span>`;
+      decHtml  += `<span class="err-dec">${escHtml(d)}</span>`;
+    } else {
+      origHtml += escHtml(o);
+      decHtml  += escHtml(d);
+    }
+  }
+
+  document.getElementById('txt-orig').innerHTML =
+    origHtml || '<em style="color:var(--dim)">empty</em>';
+  document.getElementById('txt-dec').innerHTML =
+    decHtml  || '<em style="color:var(--dim)">empty</em>';
+
+  const acc    = orig.length > 0
+    ? ((1 - charErrors / orig.length) * 100).toFixed(1) + '%'
+    : '--';
+  const berCls = data.ber < 1e-4 ? 'good' : data.ber < 1e-2 ? 'medium' : 'poor';
+
+  document.getElementById('st-ebn0').textContent    = data.ebn0_db.toFixed(1) + ' dB';
+  document.getElementById('st-biterr').textContent  = `${data.n_bit_errors} / ${data.n_bits}`;
+  document.getElementById('st-ber').innerHTML       = `<span class="${berCls}">${data.ber.toExponential(3)}</span>`;
+  document.getElementById('st-charerr').textContent = `${charErrors} / ${orig.length}`;
+  document.getElementById('st-acc').textContent     = acc;
+
+  const grid = document.getElementById('bit-grid');
+  grid.innerHTML = '';
+  const maxCells = Math.min(data.bit_errors.length, 1200);
+  for (let i = 0; i < maxCells; i++) {
+    const cell = document.createElement('div');
+    cell.className = 'bit-cell' + (data.bit_errors[i] ? ' err' : '');
+    grid.appendChild(cell);
+  }
+  if (data.bit_errors.length > maxCells) {
+    const more = document.createElement('span');
+    more.style.cssText = 'font-size:.7rem;color:var(--dim);align-self:center;margin-left:4px';
+    more.textContent = `+${data.bit_errors.length - maxCells} more bits`;
+    grid.appendChild(more);
+  }
+}
+
+/* Render constellation diagram */
+function renderConstellation(data) {
+  document.getElementById('ph-const').style.display = 'none';
+
+  const S2 = 1 / Math.sqrt(2);
+  const idealI  = [ S2, -S2, -S2,  S2];
+  const idealQ  = [ S2,  S2, -S2, -S2];
+  const labels  = ['00 (+45\u00b0)', '01 (+135\u00b0)', '11 (\u2212135\u00b0)', '10 (\u221245\u00b0)'];
+
+  const layout = {
+    paper_bgcolor: 'rgba(0,0,0,0)',
+    plot_bgcolor:  'rgba(0,0,0,0)',
+    font: { color: '#9fa8da', family: 'system-ui,sans-serif', size: 12 },
+    xaxis: {
+      title: { text: 'In-phase (I)', standoff: 6 },
+      color: '#9fa8da', gridcolor: 'rgba(100,110,220,.15)',
+      zerolinecolor: 'rgba(100,110,220,.4)', range: [-2, 2],
+      tickfont: { color: '#9fa8da' },
+    },
+    yaxis: {
+      title: { text: 'Quadrature (Q)', standoff: 6 },
+      color: '#9fa8da', gridcolor: 'rgba(100,110,220,.15)',
+      zerolinecolor: 'rgba(100,110,220,.4)', range: [-2, 2],
+      tickfont: { color: '#9fa8da' }, scaleanchor: 'x',
+    },
+    title: {
+      text: `QPSK Received Constellation \u2014 Eb/N\u2080 = ${data.ebn0_db.toFixed(1)} dB`,
+      font: { color: '#e8eaf6', size: 13 }, x: 0.5,
+    },
+    legend: {
+      bgcolor: 'rgba(26,26,48,.85)',
+      bordercolor: 'rgba(100,110,220,.3)', borderwidth: 1,
+      font: { color: '#e8eaf6', size: 11 },
+      x: 0.98, y: 0.98, xanchor: 'right', yanchor: 'top',
+    },
+    margin: { l: 60, r: 20, t: 52, b: 52 },
+    hovermode: 'closest',
+  };
+
+  Plotly.react('constellation', [
+    {
+      x: data.iq_i, y: data.iq_q,
+      mode: 'markers', name: 'Received symbols',
+      marker: {
+        color: '#00e5ff', size: 5, opacity: 0.55,
+        line: { color: 'rgba(0,229,255,.2)', width: 0 },
+      },
+      hovertemplate: 'I=%{x:.3f}, Q=%{y:.3f}<extra>Received</extra>',
+    },
+    {
+      x: idealI, y: idealQ,
+      mode: 'markers+text', name: 'Ideal QPSK',
+      text: labels, textposition: 'top center',
+      textfont: { color: '#ff5252', size: 10 },
+      marker: { symbol: 'x', size: 14, color: '#ff5252', line: { width: 2.5 } },
+      hovertemplate: '%{text}<br>I=%{x:.3f}, Q=%{y:.3f}<extra>Ideal</extra>',
+    },
+  ], layout, { responsive: true, displayModeBar: false });
+}
+
+/* Character count helper */
+function updateCharCount() {
+  const txt   = document.getElementById('txt-input').value;
+  const bytes = new TextEncoder().encode(txt).length;
+  document.getElementById('char-count').textContent =
+    `${txt.length} chars \u00b7 ${bytes * 8} bits`;
 }
 
 /* Boot */
