@@ -219,12 +219,15 @@ def rrc_filter(beta: float, sps: int, n_taps: int) -> np.ndarray:
                ─────────────────────────────────────────────────────────────
                1 - (4α·n/T)²
 
-    with l = n/sps substituted to work in symbol periods T.  The special
-    cases at n = 0 and n = ±T/(4α) are evaluated via L'Hôpital's rule:
+    where the continuous-time symbol period T is represented in discrete
+    samples as sps (i.e., T ≡ sps), so 1/√T = 1/√sps in the code.
+    The time index t = n/sps converts sample index to symbol periods.
+    The special cases at t = 0 and t = ±1/(4α) (i.e. n = ±sps/(4α))
+    are evaluated via L'Hôpital's rule:
 
-        h[0]           = (1/√T)·(1 - α + 4α/π)
-        h[±T/(4α)]     = (α/(√(2T))) · [(1+2/π)·sin(π/(4α))
-                                        + (1-2/π)·cos(π/(4α))]
+        h[0]            = (1/√sps) · (1 - α + 4α/π)
+        h[±sps/(4α)]    = (α/√(2·sps)) · [(1+2/π)·sin(π/(4α))
+                                           + (1-2/π)·cos(π/(4α))]
 
     The filter is normalised so that ||h||² = 1 (unit energy), ensuring
     the matched-filter combiner has unit gain at the decision point.

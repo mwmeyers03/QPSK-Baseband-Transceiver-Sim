@@ -31,9 +31,9 @@ def awgn_channel(
     ----------
     tx_signal : ndarray of complex128, shape (N,)
         Pulse-shaped baseband transmit waveform from the transmitter.
-        It is assumed to have unit average symbol energy (Es = 1) after
-        matched filtering; the RRC normalisation in transmitter.py ensures
-        this.
+        The RRC normalisation in transmitter.py ensures unit discrete-time
+        filter energy (||h_RRC||² = 1), so the symbol energy at the
+        matched-filter decision point equals Es = 1.
     ebn0_db : float
         Eb/N0 in decibels (dB).  This is the ratio of energy per
         information bit (Eb) to one-sided noise power spectral density (N0).
@@ -41,7 +41,9 @@ def awgn_channel(
         Number of information bits per modulation symbol.
         QPSK: k = log2(M) = log2(4) = 2.  Default 2.
     sps : int, optional
-        Samples per symbol (oversampling factor).  Default 8.
+        Samples per symbol (oversampling factor).  Retained as a parameter
+        for API consistency; it does NOT appear in the noise-variance formula
+        (see derivation below).  Default 8.
 
     Returns
     -------
@@ -53,47 +55,54 @@ def awgn_channel(
     Given:
         Eb/N0 [linear] = 10^(Eb/N0_dB / 10)
 
-    The symbol energy is:
-        Es = k · Eb           (k = bits per symbol = 2 for QPSK)
+    For unit-energy QPSK symbols (Es = 1) with k bits per symbol:
+        Eb = Es / k = 1 / k
 
-    For a complex baseband signal sampled at rate fs = sps/T (sps samples
-    per symbol period T), the noise PSD N0 is spread across all samples.
-    The noise variance per real/imaginary component is:
+    The one-sided noise PSD:
+        N0 = Eb / (Eb/N0_linear) = 1 / (k · Eb/N0_linear)
 
-        σ² = N0 / 2 = Es / (2 · k · Eb/N0)
-           = sps / (2 · k · Eb/N0_linear)
+    In the discrete-time matched-filter (MF) framework, the MF is the
+    same RRC filter applied at the receiver (identical to the Tx filter).
+    Because the RRC filter has unit discrete-time energy:
+        ||h_RRC||²_discrete = Σ_n h²[n] = 1
 
-    Because the RRC filter is normalised to unit energy (||h||² = 1) and
-    the symbols have unit energy (Es = 1), the average power of the
-    pulse-shaped signal per sample is Es/sps = 1/sps.  The noise must be
-    scaled accordingly:
+    the MF output noise variance (per real or imaginary component) at the
+    optimal sampling instant equals the input noise variance per sample:
+        σ²_MF = σ²_input · ||h_MF||²_discrete = σ²_input · 1
 
-        σ² = (Es / sps) / (2 · k · Eb/N0_linear)
-           = 1 / (2 · k · sps · Eb/N0_linear)
+    For the empirical BER to equal the theoretical QPSK BER:
+        Pb = 0.5 · erfc(√(Eb/N0))
 
-    where:
-        · The factor of 2 in the denominator accounts for the two-sided
-          noise (real + imaginary components each carry σ² variance).
-        · The factor k = bits_per_symbol accounts for the energy mapping
-          Eb → Es.
-        · The factor sps normalises for oversampling; each symbol is
-          represented by sps samples, diluting the signal power per sample.
+    the decision variable must satisfy (per QPSK arm, where A = 1/√2 is
+    the per-arm signal amplitude for unit-energy QPSK symbols):
+        Q(A / σ_MF) = Q(√(2·Eb/N0))
+        σ²_MF = A² / (2·Eb/N0) = (1/2) / (2·Eb/N0) = 1 / (4·Eb/N0)
+
+    For k = 2 bits per symbol with unit-energy symbols Es = 1, Eb = Es/k = 1/2,
+    and σ²_MF = σ²_input (from the unit-energy MF identity above):
+
+        σ² = N0 / 2 = 1 / (2 · k · Eb/N0_linear)
+
+    Key point: there is no sps factor here.  The discrete-time MF collects
+    the signal energy spread over sps samples through convolution, providing
+    the full matched-filter processing gain via the Σ_n h²[n] = 1 identity
+    regardless of the oversampling rate.
 
     Complex AWGN is generated as:
         n[i] = σ · (n_I[i] + j·n_Q[i]),   n_I, n_Q ~ N(0, 1)
 
-    where n_I and n_Q are independent real Gaussian random variables so
-    that E[|n|²] = 2σ².
+    so that E[|n[i]|²] = 2σ² (both components combined).
 
     References
     ----------
-    Proakis & Salehi, "Digital Communications", 5th ed., §4.1, Eq. (4.1-9).
-    Sklar, "Digital Communications", 2nd ed., §4.2.
+    Proakis & Salehi, "Digital Communications", 5th ed., §4.1, §8.2.4,
+        Eq. (4.1-9) and Theorem 8.2-1.
+    Sklar, "Digital Communications", 2nd ed., §4.2, §6.2.
     """
     ebn0_linear = 10.0 ** (ebn0_db / 10.0)
 
-    # Noise variance per real or imaginary component
-    sigma_sq = 1.0 / (2.0 * bits_per_symbol * sps * ebn0_linear)
+    # Noise variance per real or imaginary component: σ² = N0/2 = 1/(2·k·Eb/N0)
+    sigma_sq = 1.0 / (2.0 * bits_per_symbol * ebn0_linear)
     sigma = np.sqrt(sigma_sq)
 
     # Generate complex AWGN: real and imaginary parts are independent N(0, σ²)

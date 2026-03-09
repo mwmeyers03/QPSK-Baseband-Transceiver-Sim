@@ -1,0 +1,21 @@
+# Generated simulation output
+ber_waterfall.png
+
+# Python byte-code & caches
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+
+# IDE files
+.vscode/
+.idea/
